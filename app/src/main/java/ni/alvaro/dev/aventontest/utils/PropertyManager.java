@@ -14,6 +14,7 @@ public class PropertyManager {
     private static final String PROP_FILE_NAME = "aventon.properties";
     private static final PropertyManager ourInstance = new PropertyManager();
     private static final String API_URL = "API_URL";
+    private static final String DB_NAME = "DB_NAME";
     private static Properties props;
 
     public static void initialize(Application application) throws IOException {
@@ -43,5 +44,9 @@ public class PropertyManager {
 
     private PropertyManager() {
 
+    }
+
+    public String getDbName() {
+        return props.getProperty(DB_NAME);
     }
 }

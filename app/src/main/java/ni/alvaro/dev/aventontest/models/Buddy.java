@@ -3,6 +3,11 @@ package ni.alvaro.dev.aventontest.models;
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 
+import androidx.annotation.NonNull;
+import androidx.room.Entity;
+import androidx.room.PrimaryKey;
+
+@Entity(tableName = "tb_buddy")
 public class Buddy {
     @SerializedName("lt")
     @Expose
@@ -12,10 +17,22 @@ public class Buddy {
     private String lg;
     @SerializedName("id")
     @Expose
+    @NonNull
+    @PrimaryKey
     private String id;
     @SerializedName("name")
     @Expose
     private String name;
+
+    public long getLastUpdatedTime() {
+        return lastUpdatedTime;
+    }
+
+    public void setLastUpdatedTime(long lastUpdatedTime) {
+        this.lastUpdatedTime = lastUpdatedTime;
+    }
+
+    private long lastUpdatedTime;
 
     public String getLt() {
         return lt;
@@ -48,5 +65,6 @@ public class Buddy {
     public void setName(String name) {
         this.name = name;
     }
+
 
 }

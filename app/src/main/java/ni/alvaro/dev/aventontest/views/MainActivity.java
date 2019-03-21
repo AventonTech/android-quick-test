@@ -37,11 +37,17 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
+import androidx.lifecycle.AndroidViewModel;
+import androidx.lifecycle.Observer;
+import androidx.lifecycle.ViewModel;
+import androidx.lifecycle.ViewModelProvider;
+import androidx.lifecycle.ViewModelProviders;
 import ni.alvaro.dev.aventontest.R;
 import ni.alvaro.dev.aventontest.networking.RetrofitHelper;
 import ni.alvaro.dev.aventontest.models.Buddy;
 import ni.alvaro.dev.aventontest.utils.ServerResponse;
 import ni.alvaro.dev.aventontest.utils.Util;
+import ni.alvaro.dev.aventontest.viewmodels.BuddyViewModel;
 import ni.alvaro.dev.aventontest.views.fragments.PermissionsDeniedFragment;
 import ni.alvaro.dev.aventontest.views.fragments.ProfileFragment;
 import retrofit2.Call;
@@ -52,7 +58,7 @@ import static com.mapbox.mapboxsdk.style.expressions.Expression.get;
 import static com.mapbox.mapboxsdk.style.expressions.Expression.literal;
 import static com.mapbox.mapboxsdk.style.layers.Property.ICON_ANCHOR_BOTTOM;
 
-public class MainActivity extends AppCompatActivity implements PermissionsDeniedFragment.OnFragmentInteractionListener, MapboxMap.OnMapClickListener {
+public class MainActivity extends AppCompatActivity implements PermissionsDeniedFragment.OnFragmentInteractionListener, MapboxMap.OnMapClickListener, Observer<List<Buddy>> {
     private static final String GEOJSON_SOURCE_ID = "GEOJSON_SOURCE_ID";
     private static final String MARKER_IMAGE_ID = "MARKER_IMAGE_ID";
     private static final String MARKER_LAYER_ID = "MARKER_LAYER_ID";
@@ -60,6 +66,7 @@ public class MainActivity extends AppCompatActivity implements PermissionsDenied
     private static final String PROPERTY_SELECTED = "selected";
     private static final String PROPERTY_NAME = "name";
     private static final String MAP_TAG = "map_tag";
+
     MapboxMapOptions options = new MapboxMapOptions().camera(new CameraPosition.Builder()
             .zoom(12)
             .build());
@@ -101,6 +108,7 @@ public class MainActivity extends AppCompatActivity implements PermissionsDenied
     private String TAG = MainActivity.class.getSimpleName();
     private MapboxMap mapBox;
     private FeatureCollection usersFeatureCollection;
+    private Style mStyle;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -125,6 +133,7 @@ public class MainActivity extends AppCompatActivity implements PermissionsDenied
     @SuppressLint("MissingPermission")
     private void findUserLocation(Style style) {
         // Get an instance of the component
+        this.mStyle = style;
         LocationComponent locationComponent = mapBox.getLocationComponent();
 
         locationComponent.activateLocationComponent(MainActivity.this, style);
@@ -133,54 +142,9 @@ public class MainActivity extends AppCompatActivity implements PermissionsDenied
 
         locationComponent.setCameraMode(CameraMode.TRACKING);
         locationComponent.setRenderMode(RenderMode.COMPASS);
-        RetrofitHelper.getInstance().getUserService().getMarkers().enqueue(new Callback<ServerResponse>() {
-            @Override
-            public void onResponse(@NonNull Call<ServerResponse> call, @NonNull Response<ServerResponse> response) {
-                if (response.isSuccessful()) {
-                    ServerResponse s = response.body();
-                    if (s != null) {
-                        if (s.getError() == 0) {
-                            List<Buddy> markers = s.getResult();
-                            ArrayList<Feature> features = new ArrayList<>();
 
-                            for (Buddy m :
-                                    markers) {
-                                Feature f = Feature.fromGeometry(Point.fromLngLat(Double.parseDouble(m.getLg()), Double.parseDouble(m.getLt())));
-                                f.addStringProperty("name", m.getName());
-                                features.add(f);
-                            }
-
-                            usersFeatureCollection = FeatureCollection.fromFeatures(features);
-                            Bitmap icon = BitmapFactory.decodeResource(getResources(), R.drawable.marker);
-                            style.addImage(MARKER_IMAGE_ID, icon);
-
-
-                            GeoJsonSource geoJsonSource = new GeoJsonSource(GEOJSON_SOURCE_ID, usersFeatureCollection);
-                            style.addSource(geoJsonSource);
-                            SymbolLayer users = new SymbolLayer(MARKER_LAYER_ID, GEOJSON_SOURCE_ID);
-
-                            users.setProperties(
-                                    PropertyFactory.iconImage(MARKER_IMAGE_ID)
-
-                            );
-                            style.addLayer(users);
-
-                            setUpInfoWindowLayer(style);
-                        } else {
-                            Log.e(TAG, "onResponse: Server responded with error code::" + s.getErrorCode() + " --> " + s.getMsg());
-                        }
-                    }
-                } else {
-                    Log.e(TAG, "onResponse: No data from server retrieved");
-                }
-            }
-
-            @Override
-            public void onFailure(@NonNull Call<ServerResponse> call, @NonNull Throwable t) {
-                Log.i(TAG, "onFailure: No data from server retrieved!");
-            }
-        });
-
+        BuddyViewModel mBuddyProviders = ViewModelProviders.of(this).get(BuddyViewModel.class);
+        mBuddyProviders.getBuddies().observeForever(this);
     }
 
     private void loadMap() {
@@ -327,4 +291,32 @@ public class MainActivity extends AppCompatActivity implements PermissionsDenied
     }
 
 
+    @Override
+    public void onChanged(List<Buddy> buddies) {
+        ArrayList<Feature> features = new ArrayList<>();
+
+        for (Buddy m :
+                buddies) {
+            Feature f = Feature.fromGeometry(Point.fromLngLat(Double.parseDouble(m.getLg()), Double.parseDouble(m.getLt())));
+            f.addStringProperty("name", m.getName());
+            features.add(f);
+        }
+
+        usersFeatureCollection = FeatureCollection.fromFeatures(features);
+        Bitmap icon = BitmapFactory.decodeResource(getResources(), R.drawable.marker);
+        mStyle.addImage(MARKER_IMAGE_ID, icon);
+
+
+        GeoJsonSource geoJsonSource = new GeoJsonSource(GEOJSON_SOURCE_ID, usersFeatureCollection);
+        mStyle.addSource(geoJsonSource);
+        SymbolLayer users = new SymbolLayer(MARKER_LAYER_ID, GEOJSON_SOURCE_ID);
+
+        users.setProperties(
+                PropertyFactory.iconImage(MARKER_IMAGE_ID)
+
+        );
+        mStyle.addLayer(users);
+
+        setUpInfoWindowLayer(mStyle);
+    }
 }

@@ -9,10 +9,8 @@ import android.graphics.PointF;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.View;
 
 import com.google.android.material.bottomnavigation.BottomNavigationView;
-import com.google.android.material.snackbar.Snackbar;
 import com.mapbox.geojson.Feature;
 import com.mapbox.geojson.FeatureCollection;
 import com.mapbox.geojson.Point;
@@ -41,7 +39,7 @@ import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import ni.alvaro.dev.aventontest.R;
 import ni.alvaro.dev.aventontest.networking.RetrofitHelper;
-import ni.alvaro.dev.aventontest.utils.MapMarker;
+import ni.alvaro.dev.aventontest.models.Buddy;
 import ni.alvaro.dev.aventontest.utils.ServerResponse;
 import ni.alvaro.dev.aventontest.utils.Util;
 import ni.alvaro.dev.aventontest.views.fragments.PermissionsDeniedFragment;
@@ -142,10 +140,10 @@ public class MainActivity extends AppCompatActivity implements PermissionsDenied
                     ServerResponse s = response.body();
                     if (s != null) {
                         if (s.getError() == 0) {
-                            List<MapMarker> markers = s.getResult();
+                            List<Buddy> markers = s.getResult();
                             ArrayList<Feature> features = new ArrayList<>();
 
-                            for (MapMarker m :
+                            for (Buddy m :
                                     markers) {
                                 Feature f = Feature.fromGeometry(Point.fromLngLat(Double.parseDouble(m.getLg()), Double.parseDouble(m.getLt())));
                                 f.addStringProperty("name", m.getName());

@@ -5,6 +5,8 @@ import com.google.gson.annotations.SerializedName;
 
 import java.util.List;
 
+import ni.alvaro.dev.aventontest.models.Buddy;
+
 public class ServerResponse {
 
     @SerializedName("error")
@@ -18,7 +20,7 @@ public class ServerResponse {
     private String msg;
     @SerializedName("result")
     @Expose
-    private List<MapMarker> result = null;
+    private List<Buddy> result = null;
 
     public Integer getError() {
         return error;
@@ -44,11 +46,11 @@ public class ServerResponse {
         this.msg = msg;
     }
 
-    public List<MapMarker> getResult() {
+    public List<Buddy> getResult() {
         return result;
     }
 
-    public void setResult(List<MapMarker> result) {
+    public void setResult(List<Buddy> result) {
         this.result = result;
     }
 }

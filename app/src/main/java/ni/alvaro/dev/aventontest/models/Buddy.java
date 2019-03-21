@@ -1,9 +1,9 @@
-package ni.alvaro.dev.aventontest.utils;
+package ni.alvaro.dev.aventontest.models;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 
-public class MapMarker {
+public class Buddy {
     @SerializedName("lt")
     @Expose
     private String lt;

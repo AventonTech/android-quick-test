@@ -5,17 +5,16 @@ import android.annotation.SuppressLint;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.Color;
+import android.graphics.PointF;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
 
 import com.google.android.material.bottomnavigation.BottomNavigationView;
-import com.google.gson.Gson;
+import com.google.android.material.snackbar.Snackbar;
 import com.mapbox.geojson.Feature;
 import com.mapbox.geojson.FeatureCollection;
-import com.mapbox.geojson.Geometry;
-import com.mapbox.geojson.LineString;
 import com.mapbox.geojson.Point;
 import com.mapbox.mapboxsdk.camera.CameraPosition;
 import com.mapbox.mapboxsdk.geometry.LatLng;
@@ -26,7 +25,7 @@ import com.mapbox.mapboxsdk.maps.MapboxMap;
 import com.mapbox.mapboxsdk.maps.MapboxMapOptions;
 import com.mapbox.mapboxsdk.maps.Style;
 import com.mapbox.mapboxsdk.maps.SupportMapFragment;
-import com.mapbox.mapboxsdk.style.layers.FillLayer;
+import com.mapbox.mapboxsdk.style.expressions.Expression;
 import com.mapbox.mapboxsdk.style.layers.PropertyFactory;
 import com.mapbox.mapboxsdk.style.layers.SymbolLayer;
 import com.mapbox.mapboxsdk.style.sources.GeoJsonSource;
@@ -51,13 +50,18 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
-import static com.mapbox.mapboxsdk.style.layers.PropertyFactory.fillColor;
-import static com.mapbox.mapboxsdk.style.layers.PropertyFactory.fillOpacity;
+import static com.mapbox.mapboxsdk.style.expressions.Expression.get;
+import static com.mapbox.mapboxsdk.style.expressions.Expression.literal;
+import static com.mapbox.mapboxsdk.style.layers.Property.ICON_ANCHOR_BOTTOM;
 
 public class MainActivity extends AppCompatActivity implements PermissionsDeniedFragment.OnFragmentInteractionListener, MapboxMap.OnMapClickListener {
-
+    private static final String GEOJSON_SOURCE_ID = "GEOJSON_SOURCE_ID";
+    private static final String MARKER_IMAGE_ID = "MARKER_IMAGE_ID";
+    private static final String MARKER_LAYER_ID = "MARKER_LAYER_ID";
+    private static final String CALLOUT_LAYER_ID = "CALLOUT_LAYER_ID";
+    private static final String PROPERTY_SELECTED = "selected";
+    private static final String PROPERTY_NAME = "name";
     private static final String MAP_TAG = "map_tag";
-    private static final String MARKERS = "MARKERS";
     MapboxMapOptions options = new MapboxMapOptions().camera(new CameraPosition.Builder()
             .zoom(12)
             .build());
@@ -98,6 +102,7 @@ public class MainActivity extends AppCompatActivity implements PermissionsDenied
     };
     private String TAG = MainActivity.class.getSimpleName();
     private MapboxMap mapBox;
+    private FeatureCollection usersFeatureCollection;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -136,7 +141,6 @@ public class MainActivity extends AppCompatActivity implements PermissionsDenied
                 if (response.isSuccessful()) {
                     ServerResponse s = response.body();
                     if (s != null) {
-                        Gson g = new Gson();
                         if (s.getError() == 0) {
                             List<MapMarker> markers = s.getResult();
                             ArrayList<Feature> features = new ArrayList<>();
@@ -148,22 +152,22 @@ public class MainActivity extends AppCompatActivity implements PermissionsDenied
                                 features.add(f);
                             }
 
-                            FeatureCollection featureCollection = FeatureCollection.fromFeatures(features);
+                            usersFeatureCollection = FeatureCollection.fromFeatures(features);
                             Bitmap icon = BitmapFactory.decodeResource(getResources(), R.drawable.marker);
-                            style.addImage("user-marker-icon", icon);
+                            style.addImage(MARKER_IMAGE_ID, icon);
 
 
-                            GeoJsonSource geoJsonSource = new GeoJsonSource("users-geojson-source", featureCollection);
+                            GeoJsonSource geoJsonSource = new GeoJsonSource(GEOJSON_SOURCE_ID, usersFeatureCollection);
                             style.addSource(geoJsonSource);
-                            SymbolLayer users = new SymbolLayer("current-users", "users-geojson-source");
+                            SymbolLayer users = new SymbolLayer(MARKER_LAYER_ID, GEOJSON_SOURCE_ID);
 
                             users.setProperties(
-                                    PropertyFactory.iconImage("user-marker-icon")
+                                    PropertyFactory.iconImage(MARKER_IMAGE_ID)
 
                             );
                             style.addLayer(users);
 
-
+                            setUpInfoWindowLayer(style);
                         } else {
                             Log.e(TAG, "onResponse: Server responded with error code::" + s.getErrorCode() + " --> " + s.getMsg());
                         }
@@ -185,8 +189,23 @@ public class MainActivity extends AppCompatActivity implements PermissionsDenied
         mapsFragment.getMapAsync(mapboxMap -> mapboxMap.setStyle(Style.MAPBOX_STREETS, style -> {
             // Map is set up and the style has loaded. Now you can add data or make other map adjustments
             this.mapBox = mapboxMap;
+            this.mapBox.addOnMapClickListener(this);
             findUserLocation(style);
         }));
+    }
+
+    private void setUpInfoWindowLayer(@NonNull Style loadedStyle) {
+        loadedStyle.addLayer(new SymbolLayer(CALLOUT_LAYER_ID, GEOJSON_SOURCE_ID)
+                .withProperties(
+                        PropertyFactory.iconImage("{name}"),
+
+                        PropertyFactory.iconAnchor(ICON_ANCHOR_BOTTOM),
+
+                        PropertyFactory.iconAllowOverlap(true),
+
+                        PropertyFactory.iconOffset(new Float[]{-2f, -25f})
+                )
+                .withFilter(Expression.eq((get(PROPERTY_SELECTED)), literal(true))));
     }
 
 
@@ -283,6 +302,31 @@ public class MainActivity extends AppCompatActivity implements PermissionsDenied
 
     @Override
     public boolean onMapClick(@NonNull LatLng point) {
-        return false;
+        return handleClickIcon(mapBox.getProjection().toScreenLocation(point));
     }
+
+    private boolean handleClickIcon(PointF screenPoint) {
+        List<Feature> features = mapBox.queryRenderedFeatures(screenPoint, MARKER_LAYER_ID);
+        if (!features.isEmpty()) {
+            String name = features.get(0).getStringProperty(PROPERTY_NAME);
+            if (usersFeatureCollection != null) {
+
+                List<Feature> featureList = usersFeatureCollection.features();
+                if (featureList != null) {
+                    for (Feature f :
+                            featureList) {
+                        if (f.getStringProperty(PROPERTY_NAME).equals(name)) {
+                            Log.i(TAG, "handleClickIcon: Feature selected -- " + f.toJson());
+
+                        }
+                    }
+                }
+            }
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+
 }

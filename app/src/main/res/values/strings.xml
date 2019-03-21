@@ -12,4 +12,5 @@
     <string name="location_request_rationale">Aventon needs to access your location in order to provide the best experience possible.</string>
     <string name="grant">Grant</string>
     <string name="deny">Deny</string>
+    <string name="marker_selected">You selected %1$s</string>
 </resources>

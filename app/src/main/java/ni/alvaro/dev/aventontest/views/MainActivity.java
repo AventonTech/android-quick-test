@@ -3,6 +3,9 @@ package ni.alvaro.dev.aventontest.views;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Color;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
@@ -23,6 +26,9 @@ import com.mapbox.mapboxsdk.maps.MapboxMap;
 import com.mapbox.mapboxsdk.maps.MapboxMapOptions;
 import com.mapbox.mapboxsdk.maps.Style;
 import com.mapbox.mapboxsdk.maps.SupportMapFragment;
+import com.mapbox.mapboxsdk.style.layers.FillLayer;
+import com.mapbox.mapboxsdk.style.layers.PropertyFactory;
+import com.mapbox.mapboxsdk.style.layers.SymbolLayer;
 import com.mapbox.mapboxsdk.style.sources.GeoJsonSource;
 
 import java.util.ArrayList;
@@ -45,7 +51,10 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
-public class MainActivity extends AppCompatActivity implements PermissionsDeniedFragment.OnFragmentInteractionListener,MapboxMap.OnMapClickListener{
+import static com.mapbox.mapboxsdk.style.layers.PropertyFactory.fillColor;
+import static com.mapbox.mapboxsdk.style.layers.PropertyFactory.fillOpacity;
+
+public class MainActivity extends AppCompatActivity implements PermissionsDeniedFragment.OnFragmentInteractionListener, MapboxMap.OnMapClickListener {
 
     private static final String MAP_TAG = "map_tag";
     private static final String MARKERS = "MARKERS";
@@ -103,7 +112,7 @@ public class MainActivity extends AppCompatActivity implements PermissionsDenied
         navigation.setSelectedItemId(R.id.maps);
         if (ContextCompat.checkSelfPermission(this,
                 Manifest.permission.ACCESS_FINE_LOCATION)
-                == PackageManager.PERMISSION_GRANTED){
+                == PackageManager.PERMISSION_GRANTED) {
             loadMap();
 
         }
@@ -124,33 +133,42 @@ public class MainActivity extends AppCompatActivity implements PermissionsDenied
         RetrofitHelper.getInstance().getUserService().getMarkers().enqueue(new Callback<ServerResponse>() {
             @Override
             public void onResponse(@NonNull Call<ServerResponse> call, @NonNull Response<ServerResponse> response) {
-                if (response.isSuccessful()){
+                if (response.isSuccessful()) {
                     ServerResponse s = response.body();
                     if (s != null) {
                         Gson g = new Gson();
-                        if (s.getError() == 0){
+                        if (s.getError() == 0) {
                             List<MapMarker> markers = s.getResult();
                             ArrayList<Feature> features = new ArrayList<>();
 
                             for (MapMarker m :
                                     markers) {
                                 Feature f = Feature.fromGeometry(Point.fromLngLat(Double.parseDouble(m.getLg()), Double.parseDouble(m.getLt())));
-                                f.addStringProperty("name",m.getName());
+                                f.addStringProperty("name", m.getName());
                                 features.add(f);
                             }
 
                             FeatureCollection featureCollection = FeatureCollection.fromFeatures(features);
+                            Bitmap icon = BitmapFactory.decodeResource(getResources(), R.drawable.marker);
+                            style.addImage("user-marker-icon", icon);
 
 
                             GeoJsonSource geoJsonSource = new GeoJsonSource("users-geojson-source", featureCollection);
                             style.addSource(geoJsonSource);
+                            SymbolLayer users = new SymbolLayer("current-users", "users-geojson-source");
+
+                            users.setProperties(
+                                    PropertyFactory.iconImage("user-marker-icon")
+
+                            );
+                            style.addLayer(users);
 
 
-                        }else{
-                            Log.e(TAG, "onResponse: Server responded with error code::"+s.getErrorCode()+" --> "+s.getMsg());
+                        } else {
+                            Log.e(TAG, "onResponse: Server responded with error code::" + s.getErrorCode() + " --> " + s.getMsg());
                         }
                     }
-                }else{
+                } else {
                     Log.e(TAG, "onResponse: No data from server retrieved");
                 }
             }
@@ -184,7 +202,7 @@ public class MainActivity extends AppCompatActivity implements PermissionsDenied
                             .commit();
                     currentFrag = mapsFragment;
 
-                   loadMap();
+                    loadMap();
 
                 }
             }

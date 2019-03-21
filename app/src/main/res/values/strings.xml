@@ -13,4 +13,7 @@
     <string name="grant">Grant</string>
     <string name="deny">Deny</string>
     <string name="marker_selected">You selected %1$s</string>
+    <string name="refresh">Refresh</string>
+    <string name="updating_data_from_server">Updating data from server…</string>
+    <string name="data_updated">Data updated!</string>
 </resources>

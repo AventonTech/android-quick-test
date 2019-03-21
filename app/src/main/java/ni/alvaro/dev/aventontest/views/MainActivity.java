@@ -9,8 +9,11 @@ import android.graphics.PointF;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
 
 import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.android.material.snackbar.Snackbar;
 import com.mapbox.geojson.Feature;
 import com.mapbox.geojson.FeatureCollection;
 import com.mapbox.geojson.Point;
@@ -37,29 +40,22 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
-import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.Observer;
-import androidx.lifecycle.ViewModel;
-import androidx.lifecycle.ViewModelProvider;
 import androidx.lifecycle.ViewModelProviders;
 import ni.alvaro.dev.aventontest.R;
-import ni.alvaro.dev.aventontest.networking.RetrofitHelper;
 import ni.alvaro.dev.aventontest.models.Buddy;
-import ni.alvaro.dev.aventontest.utils.ServerResponse;
+import ni.alvaro.dev.aventontest.utils.SyncHelper;
 import ni.alvaro.dev.aventontest.utils.Util;
 import ni.alvaro.dev.aventontest.viewmodels.BuddyViewModel;
 import ni.alvaro.dev.aventontest.views.fragments.PermissionsDeniedFragment;
 import ni.alvaro.dev.aventontest.views.fragments.ProfileFragment;
-import retrofit2.Call;
-import retrofit2.Callback;
-import retrofit2.Response;
 
 import static com.mapbox.mapboxsdk.style.expressions.Expression.get;
 import static com.mapbox.mapboxsdk.style.expressions.Expression.literal;
 import static com.mapbox.mapboxsdk.style.layers.Property.ICON_ANCHOR_BOTTOM;
 
 public class MainActivity extends AppCompatActivity implements PermissionsDeniedFragment.OnFragmentInteractionListener, MapboxMap.OnMapClickListener, Observer<List<Buddy>> {
-    private static final String GEOJSON_SOURCE_ID = "GEOJSON_SOURCE_ID";
+    private static final String  GEOJSON_SOURCE_ID = "GEOJSON_SOURCE_ID";
     private static final String MARKER_IMAGE_ID = "MARKER_IMAGE_ID";
     private static final String MARKER_LAYER_ID = "MARKER_LAYER_ID";
     private static final String CALLOUT_LAYER_ID = "CALLOUT_LAYER_ID";
@@ -109,6 +105,7 @@ public class MainActivity extends AppCompatActivity implements PermissionsDenied
     private MapboxMap mapBox;
     private FeatureCollection usersFeatureCollection;
     private Style mStyle;
+    private GeoJsonSource geoJsonSource;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -129,6 +126,29 @@ public class MainActivity extends AppCompatActivity implements PermissionsDenied
         }
     }
 
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate the menu; this adds items to the action bar if it is present.
+        getMenuInflater().inflate(R.menu.toolbar, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        int id = item.getItemId();
+
+        if (id == R.id.refresh) {
+            showSnackBar(R.string.updating_data_from_server);
+            SyncHelper.getInstance().getBuddiesFromServer(getApplication());
+            return true;
+        }
+
+        return super.onOptionsItemSelected(item);
+    }
+
+    private void showSnackBar(int stringRes) {
+        Snackbar.make(findViewById(R.id.container), stringRes, Snackbar.LENGTH_SHORT).show();
+    }
 
     @SuppressLint("MissingPermission")
     private void findUserLocation(Style style) {
@@ -168,8 +188,8 @@ public class MainActivity extends AppCompatActivity implements PermissionsDenied
                         PropertyFactory.iconOffset(new Float[]{-2f, -25f})
                 )
                 .withFilter(Expression.eq((get(PROPERTY_SELECTED)), literal(true))));
-    }
 
+    }
 
     @Override
     public void onRequestPermissionsResult(int requestCode,
@@ -280,6 +300,11 @@ public class MainActivity extends AppCompatActivity implements PermissionsDenied
                         if (f.getStringProperty(PROPERTY_NAME).equals(name)) {
                             Log.i(TAG, "handleClickIcon: Feature selected -- " + f.toJson());
 
+                            Snackbar.make(findViewById(R.id.container),
+                                    getString(R.string.marker_selected, f.getStringProperty("name"))
+                                    , Snackbar.LENGTH_SHORT).show();
+
+
                         }
                     }
                 }
@@ -299,24 +324,42 @@ public class MainActivity extends AppCompatActivity implements PermissionsDenied
                 buddies) {
             Feature f = Feature.fromGeometry(Point.fromLngLat(Double.parseDouble(m.getLg()), Double.parseDouble(m.getLt())));
             f.addStringProperty("name", m.getName());
+            if (geoJsonSource == null) {
+                f.addBooleanProperty("selected", false);
+            }
             features.add(f);
         }
-
         usersFeatureCollection = FeatureCollection.fromFeatures(features);
-        Bitmap icon = BitmapFactory.decodeResource(getResources(), R.drawable.marker);
-        mStyle.addImage(MARKER_IMAGE_ID, icon);
+        if (geoJsonSource != null) {
+            refreshGeoSource();
+        } else {
+
+            geoJsonSource = new GeoJsonSource(GEOJSON_SOURCE_ID, usersFeatureCollection);
+            SymbolLayer users = new SymbolLayer(MARKER_LAYER_ID, GEOJSON_SOURCE_ID);
+
+            users.setProperties(
+                    PropertyFactory.iconImage(MARKER_IMAGE_ID)
+
+            );
+
+            Bitmap icon = BitmapFactory.decodeResource(getResources(), R.drawable.marker);
+            mStyle.addImage(MARKER_IMAGE_ID, icon);
+            mStyle.addSource(geoJsonSource);
+            mStyle.addLayer(users);
+
+            setUpInfoWindowLayer(mStyle);
+
+        }
 
 
-        GeoJsonSource geoJsonSource = new GeoJsonSource(GEOJSON_SOURCE_ID, usersFeatureCollection);
-        mStyle.addSource(geoJsonSource);
-        SymbolLayer users = new SymbolLayer(MARKER_LAYER_ID, GEOJSON_SOURCE_ID);
-
-        users.setProperties(
-                PropertyFactory.iconImage(MARKER_IMAGE_ID)
-
-        );
-        mStyle.addLayer(users);
-
-        setUpInfoWindowLayer(mStyle);
+        showSnackBar(R.string.data_updated);
     }
+
+    private void refreshGeoSource() {
+        if (geoJsonSource != null && usersFeatureCollection != null) {
+            geoJsonSource.setGeoJson(usersFeatureCollection);
+        }
+    }
+
+
 }

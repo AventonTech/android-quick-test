@@ -15,7 +15,6 @@ import androidx.core.app.Person;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
-import androidx.fragment.app.FragmentTransaction;
 import ni.alvaro.dev.aventontest.R;
 import ni.alvaro.dev.aventontest.utils.Util;
 import ni.alvaro.dev.aventontest.views.fragments.MapFragment;

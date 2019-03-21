@@ -1,11 +1,21 @@
 package ni.alvaro.dev.aventontest.views.fragments;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
+import com.mapbox.mapboxsdk.location.LocationComponent;
+import com.mapbox.mapboxsdk.location.modes.CameraMode;
+import com.mapbox.mapboxsdk.location.modes.RenderMode;
+import com.mapbox.mapboxsdk.maps.MapView;
+import com.mapbox.mapboxsdk.maps.MapboxMap;
+import com.mapbox.mapboxsdk.maps.OnMapReadyCallback;
+import com.mapbox.mapboxsdk.maps.Style;
+
+import androidx.annotation.NonNull;
 import androidx.core.app.Person;
 import androidx.fragment.app.Fragment;
 import ni.alvaro.dev.aventontest.R;
@@ -22,6 +32,10 @@ public class MapFragment extends Fragment {
 
     private OnFragmentInteractionListener mListener;
     public static final String TAG = MapFragment.class.getSimpleName();
+    private MapView mapView;
+    private MapboxMap mapBox;
+    private Context mContext;
+
     public MapFragment() {
         // Required empty public constructor
     }
@@ -38,9 +52,32 @@ public class MapFragment extends Fragment {
 
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
+    public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        return inflater.inflate(R.layout.fragment_map, container, false);
+        View v =inflater.inflate(R.layout.fragment_map, container, false);;
+        mapView = v.findViewById(R.id.map_view);
+        mapView.onCreate(savedInstanceState);
+
+        mapView.getMapAsync(mapboxMap -> mapboxMap.setStyle(Style.MAPBOX_STREETS, style -> {
+            // Map is set up and the style has loaded. Now you can add data or make other map adjustments
+            this.mapBox = mapboxMap;
+            findUserLocation(style);
+        }));
+        return v;
+    }
+
+
+    @SuppressLint("MissingPermission")
+    private void findUserLocation(Style style) {
+        // Get an instance of the component
+        LocationComponent locationComponent = mapBox.getLocationComponent();
+
+        locationComponent.activateLocationComponent(mContext, style);
+
+        locationComponent.setLocationComponentEnabled(true);
+
+        locationComponent.setCameraMode(CameraMode.TRACKING);
+        locationComponent.setRenderMode(RenderMode.COMPASS);
     }
 
 
@@ -51,8 +88,9 @@ public class MapFragment extends Fragment {
     }
 
     @Override
-    public void onAttach(Context context) {
+    public void onAttach(@NonNull Context context) {
         super.onAttach(context);
+        this.mContext = context;
         if (context instanceof OnFragmentInteractionListener) {
             mListener = (OnFragmentInteractionListener) context;
         } else {
@@ -69,5 +107,41 @@ public class MapFragment extends Fragment {
 
     public interface OnFragmentInteractionListener {
         void onPersonMarkerInteraction(Person person);
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        mapView.onResume();
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        mapView.onPause();
+    }
+
+    @Override
+    public void onStop() {
+        super.onStop();
+        mapView.onStop();
+    }
+
+    @Override
+    public void onLowMemory() {
+        super.onLowMemory();
+        mapView.onLowMemory();
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        mapView.onDestroy();
+    }
+
+    @Override
+    public void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+        mapView.onSaveInstanceState(outState);
     }
 }

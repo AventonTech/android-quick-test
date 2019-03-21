@@ -11,7 +11,7 @@ import ni.alvaro.dev.aventontest.R;
 
 
 public class ProfileFragment extends Fragment {
-
+    public static final String TAG = ProfileFragment.class.getSimpleName();
     public ProfileFragment() {
 
     }

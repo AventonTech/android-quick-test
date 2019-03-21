@@ -21,7 +21,7 @@ import ni.alvaro.dev.aventontest.R;
 public class MapFragment extends Fragment {
 
     private OnFragmentInteractionListener mListener;
-
+    public static final String TAG = MapFragment.class.getSimpleName();
     public MapFragment() {
         // Required empty public constructor
     }

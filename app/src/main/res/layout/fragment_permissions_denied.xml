@@ -6,7 +6,7 @@
     android:layout_height="match_parent"
 
     android:layout_margin="8dp"
-    tools:context=".views.fragments.PermissionsDenied">
+    tools:context=".views.fragments.PermissionsDeniedFragment">
 
     <TextView
         android:id="@+id/messageTxt"
@@ -44,6 +44,7 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent"
+        android:onClick="onButtonClicked"/>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

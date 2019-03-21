@@ -7,7 +7,10 @@ import com.mapbox.mapboxsdk.Mapbox;
 
 import java.io.IOException;
 
+import ni.alvaro.dev.aventontest.networking.RetrofitHelper;
 import ni.alvaro.dev.aventontest.utils.PropertyManager;
+import retrofit2.Retrofit;
+import retrofit2.converter.gson.GsonConverterFactory;
 
 public class AventonApp extends Application {
 
@@ -20,6 +23,8 @@ public class AventonApp extends Application {
         try {
             PropertyManager.initialize(this);
             Mapbox.getInstance(this,PropertyManager.getInstance().getSecureMapKey());
+
+
         } catch (IOException e) {
             Log.i(TAG, "onCreate: App couln't load properties file!");
         }

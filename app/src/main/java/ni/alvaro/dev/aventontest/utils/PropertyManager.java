@@ -13,12 +13,13 @@ public class PropertyManager {
 
     private static final String PROP_FILE_NAME = "aventon.properties";
     private static final PropertyManager ourInstance = new PropertyManager();
+    private static final String API_URL = "API_URL";
     private static Properties props;
 
     public static void initialize(Application application) throws IOException {
         Properties properties = new Properties();
         AssetManager assetManager = application.getAssets();
-        InputStream inputStream = null;
+        InputStream inputStream;
         inputStream = assetManager.open(PROP_FILE_NAME);
         properties.load(inputStream);
 
@@ -32,12 +33,12 @@ public class PropertyManager {
     }
 
 
-    public Properties getProps(){
-        return props;
-    }
 
     public String getSecureMapKey(){
         return props.getProperty(MAP_KEY);
+    }
+    public String getApiURL(){
+        return props.getProperty(API_URL);
     }
 
     private PropertyManager() {
